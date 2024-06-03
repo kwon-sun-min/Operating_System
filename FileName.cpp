@@ -344,7 +344,6 @@ void monitorProcess() {
     std::unique_lock<std::mutex> lock(mtx);
     while (true) {
         cv.wait(lock, [] { return lineProcessed; }); // shell 프로세스의 신호 대기
-        std::cout << "Monitor process is now running." << std::endl;
         printDynamicQueueWithStackLinks(); // DQ의 상태를 출력
         lineProcessed = false; 
         std::this_thread::sleep_for(2s); // X초 동안 대기

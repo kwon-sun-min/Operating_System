@@ -11,7 +11,6 @@
 #include <memory>
 
 
-// Class to represent a Process
 class Process {
 public:
     std::string name;
@@ -21,11 +20,9 @@ public:
     Process(const std::string& name, bool isForeground)
         : name(name), isForeground(isForeground), thread() {}
 
-    // Move constructor for Process
     Process(Process&& other) noexcept
         : name(std::move(other.name)), isForeground(other.isForeground), thread(std::move(other.thread)) {}
 
-    // Deleted copy constructor and assignment operator
     Process(const Process&) = delete;
     Process& operator=(const Process&) = delete;
 };
@@ -48,28 +45,27 @@ public:
 };
 
 
-// Global variables
 std::vector<Process> dynamicQueue;
 std::queue<Process> waitQueue;
 std::mutex mtx;
 std::condition_variable cv;
-std::shared_ptr<StackNode> bottomNode = std::make_shared<StackNode>(); // Bottom of the stack
-std::shared_ptr<StackNode> topNode = bottomNode; // Top of the stack initially points to the bottom
-std::shared_ptr<StackNode> p = bottomNode; // '다음에 promote()할 스택 노드'를 가리키는 포인터
-bool lineProcessed = false; // 신호 변수
-bool ready = false; // Condition variable predicate
-int processID = 0; // pid를 위한 전역 변수
+std::shared_ptr<StackNode> bottomNode = std::make_shared<StackNode>(); 
+std::shared_ptr<StackNode> topNode = bottomNode; 
+std::shared_ptr<StackNode> p = bottomNode; 
+bool lineProcessed = false; 
+bool ready = false; 
+int processID = 0; 
 
 
 
 // Main scheduling function
 void scheduler() {
     while (true) {
-        std::this_thread::sleep_for(std::chrono::seconds(1)); // Simulate 1-second intervals
+        std::this_thread::sleep_for(std::chrono::seconds(1));
         std::unique_lock<std::mutex> lock(mtx);
-        cv.wait(lock, [] { return ready; }); // Wait for the condition variable notification
-        // Process scheduling logic
-        ready = false; // Reset the condition variable predicate
+        cv.wait(lock, [] { return ready; }); 
+        
+        ready = false;
     }
 }
 
@@ -79,17 +75,14 @@ void addNewStackNode() {
     std::shared_ptr<StackNode> newNode = std::make_shared<StackNode>();
     std::shared_ptr<StackNode> current = bottomNode;
 
-    // Traverse to the end of the stack
     while (current->next != nullptr) {
         current = current->next;
     }
 
-    // Add the new node at the end
     current->next = newNode;
-    topNode = newNode; // Update the top node pointer
+    topNode = newNode; 
 }
 
-// Function to dequeue a process from the top of the stack
 
 
 void promote() {
@@ -134,7 +127,6 @@ void promote() {
 }
 
 void split_n_merge() {
-    // 전체 프로세스 개수 계산
     int totalProcesses = 0;
     std::shared_ptr<StackNode> node = bottomNode;
     while (node != nullptr) {
@@ -205,7 +197,6 @@ void split_n_merge() {
 void enqueue(std::shared_ptr<Process> process) {
     auto newNode = std::make_shared<ProcessNode>(process);
     if (process->isForeground) {
-        // Insert at the end of the top list
         if (!topNode->processList) {
             topNode->processList = newNode;
         }
@@ -218,7 +209,6 @@ void enqueue(std::shared_ptr<Process> process) {
         }
     }
     else {
-        // Insert at the end of the bottom list
         if (!bottomNode->processList) {
             bottomNode->processList = newNode;
         }
@@ -235,34 +225,31 @@ void enqueue(std::shared_ptr<Process> process) {
 
 std::shared_ptr<Process> dequeue() {
     if (topNode->processList == nullptr) {
-        // If the top list is empty, move down the stack if possible
         if (topNode != bottomNode) {
             std::shared_ptr<StackNode> current = bottomNode;
             while (current->next != topNode) {
                 current = current->next;
             }
-            current->next = nullptr; // Remove the empty top node
-            topNode = current; // Update the top node pointer
+            current->next = nullptr; 
+            topNode = current; 
         }
         split_n_merge();
-        return nullptr; // No process to dequeue
+        return nullptr; 
     }
 
-    // Get the first process in the top list
     auto processNode = topNode->processList;
-    topNode->processList = processNode->next; // Remove the process node from the list
+    topNode->processList = processNode->next; 
 
-    // If the list is now empty, remove the stack node if it's not the bottom node
     if (topNode->processList == nullptr && topNode != bottomNode) {
         std::shared_ptr<StackNode> current = bottomNode;
         while (current->next != topNode) {
             current = current->next;
         }
-        current->next = nullptr; // Remove the empty top node
-        topNode = current; // Update the top node pointer
+        current->next = nullptr; 
+        topNode = current; 
     }
     split_n_merge();
-    return processNode->process; // Return the dequeued process
+    return processNode->process; 
 }
 
 
@@ -270,7 +257,6 @@ std::shared_ptr<Process> dequeue() {
 
 
 
-// Define the printDynamicQueue function as provided
 void printDynamicQueue() {
     std::shared_ptr<StackNode> currentStackNode = bottomNode;
     while (currentStackNode != nullptr) {
@@ -282,7 +268,7 @@ void printDynamicQueue() {
         std::cout << "NULL" << std::endl;
         currentStackNode = currentStackNode->next;
     }
-    std::cout << "NULL" << std::endl; // To indicate the end of the stack
+    std::cout << "NULL" << std::endl; 
 }
 
 void printDynamicQueueWithStackLinks() {
@@ -299,7 +285,7 @@ void printDynamicQueueWithStackLinks() {
         currentStackNode = currentStackNode->next;
         stackLevel++;
     }
-    std::cout << "End of Stack\n" << std::endl; // To indicate the end of the entire stack
+    std::cout << "End of Stack\n" << std::endl; 
 }
 
 void createAndEnqueueProcesses() {
@@ -329,14 +315,8 @@ void createAndEnqueueProcesses() {
     enqueue(process8);
     enqueue(process9);
     enqueue(process10);
-
-
-    //split_n_merge();
-
 }
 
-// Function for the shell process
-// Shell 프로세스는 명령(들)을 한 줄 실행한 후 Y초 동안 sleep합니다.
 void shellProcess() {
     using namespace std::chrono_literals;
     std::ifstream file("commands.txt");
@@ -345,15 +325,15 @@ void shellProcess() {
         {
             std::lock_guard<std::mutex> lock(mtx);
             std::cout << "Shell received command: " << command << std::endl;
-            // 명령어 처리 로직을 여기에 추가합니다.
-            lineProcessed = true; // 한 줄 처리 완료
+
+            lineProcessed = true; // 한 줄 처리 
             auto dequeuedProcess = dequeue();
             if (dequeuedProcess != nullptr) {
                 std::cout << "\nDispatching process: " << dequeuedProcess->name << std::endl;
             }
 
         }
-        cv.notify_one(); // monitor 프로세스에 신호 보내기
+        cv.notify_one(); 
         std::this_thread::sleep_for(3s); // Y초 동안 대기
     }
 }
@@ -366,21 +346,18 @@ void monitorProcess() {
         cv.wait(lock, [] { return lineProcessed; }); // shell 프로세스의 신호 대기
         std::cout << "Monitor process is now running." << std::endl;
         printDynamicQueueWithStackLinks(); // DQ의 상태를 출력
-        // WQ의 상태를 출력하는 코드를 여기에 추가합니다.
-        lineProcessed = false; // 다음 신호를 위해 변수 초기화
+        lineProcessed = false; 
         std::this_thread::sleep_for(2s); // X초 동안 대기
     }
 }
 
 
 int main() {
-    // Create and start shell and monitor processes
     std::thread shellThread(shellProcess);
     std::thread monitorThread(monitorProcess);
 
     createAndEnqueueProcesses(); // 프로세스 생성 및 큐에 추가
 
-    // Wait for the shell and monitor threads to finish
     shellThread.join();
     monitorThread.join();
 
